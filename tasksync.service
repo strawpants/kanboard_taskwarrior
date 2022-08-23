@@ -1,0 +1,10 @@
+[Unit]
+Description=Taskwarrior Kanboard synchronization service
+
+[Service]
+Type=simple
+ExecStart=tasksync.py -s -d -v
+Restart=no
+
+[Install]
+WantedBy=default.target
