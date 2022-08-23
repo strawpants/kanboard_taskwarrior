@@ -21,3 +21,9 @@ options:
   -l, --list            List configured couplings
   -v, --verbose         Increase verbosity (more -v's mean an increased verbosity)
 ```
+
+# TODO
+* refactor code in seperate files and turn into a pip package
+* Add functionality to detect deleted tasks and delete their synced counterparts
+* Add documentation on usage
+
