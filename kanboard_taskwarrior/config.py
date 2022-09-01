@@ -40,11 +40,12 @@ def configUDA(mapper):
             continue
         udaval=[ky for ky in udamap.keys()] 
         #retrieve an existing uda (to update values)
-        udaval.extend(tw.config['uda.swimlane.values'].split(","))
 
         valky=f"{udaky}.values"
         labky=f"{udaky}.label"
         typeky=f"{udaky}.type"
+
+        udaval.extend(tw.config[valky].split(","))
 
         # if valky in tw.config:
             # udaval2=tw.config[valky]
