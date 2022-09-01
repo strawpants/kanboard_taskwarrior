@@ -12,13 +12,6 @@ from pprint import pprint
 import time
 
 
-
-
-
-
-
-
-
 def main(argv):
 
     #parse command line arguments
@@ -42,6 +35,12 @@ def main(argv):
                         help="Report the actions which a sync would do but do not actually execute them")
 
     
+    parser.add_argument('-r','--remove',action='store_true',
+                        help="Remove a project link from the database, this does not delete actual tasks")
+
+    parser.add_argument('-p','--purge',action='store_true',
+                        help="Purge dangling tasks (deleted in either taskwarrior or kanboard)")
+
     parser.add_argument('-l','--list',action='store_true',
                         help="List configured couplings")
     parser.add_argument('-v','--verbose',action='count',default=0,help="Increase verbosity (more -v's mean an increased verbosity)")    
@@ -60,7 +59,7 @@ def main(argv):
     logging.basicConfig(format='tasksync-%(levelname)s:%(message)s', level=loglevel)
 
     #open up a connection with a database 
-    conn=DbConnector()
+    conn=DbConnector(test=args.test)
 
     if args.list:
         for projname,res in conn.items():
@@ -68,6 +67,19 @@ def main(argv):
             #also print mapping
             pprint(res["mapping"])
         sys.exit(0)
+
+    if args.remove:
+        if not args.project:
+            logging.error("Removing a project requires a project name")
+            sys.exit(1)
+        conn.remove(args.project)
+
+    if args.purge:
+
+        if not args.project:
+            logging.error("Purging deleted project tasks requires a project name")
+            sys.exit(1)
+        conn.purgeTasks(args.project)
 
     if args.config:
         if not args.project:
@@ -77,12 +89,13 @@ def main(argv):
 
     if args.sync:
         if args.daemonize:
+            print(f"Starting in deamon mode (checks every {args.daemonize} seconds)")
             while True:
-                conn.syncTasks(args.project,args.test)
+                conn.syncTasks(args.project)
                 logging.info(f"Sleeping for {args.daemonize} seconds")
                 time.sleep(args.daemonize)
         else:
-            conn.syncTasks(args.project,args.test)
+            conn.syncTasks(args.project)
 
 
 if __name__ == "__main__":

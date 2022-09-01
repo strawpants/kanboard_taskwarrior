@@ -2,9 +2,9 @@
 # contains functionality to setup a syncing connection
 import logging
 from kanboard_taskwarrior.taskmap import getVtags,colkey,catkey,swimkey
-from kanboard_taskwarrior.clients import kbClient,twClient
-from kanboard import ClientError
+from kanboard_taskwarrior.clients import kbClient,twClient,KBClientError
 
+import sys
 from copy import deepcopy
 from datetime import datetime
 
@@ -41,6 +41,7 @@ def configUDA(mapper):
         udaval=[ky for ky in udamap.keys()] 
         #retrieve an existing uda (to update values)
         udaval.extend(tw.config['uda.swimlane.values'].split(","))
+
         valky=f"{udaky}.values"
         labky=f"{udaky}.label"
         typeky=f"{udaky}.type"
@@ -58,8 +59,8 @@ def configUDA(mapper):
         tw.execute_command(["config", typeky, tpy])
 
         tw.execute_command(["config", labky,label])
-
-        tw.execute_command(["config",valky,','.join(udaval)])
+        uniqueval=",".join(set(udaval))
+        tw.execute_command(["config",valky,uniqueval])
 
 def configMap(values,existingMap,maptype):
 
@@ -109,7 +110,8 @@ def runConfig(project,projconf):
     logging.info("Setting up Kanboard- taskwarrior mapping")
     keyprompts={"url":"Enter Kanboard serveraddress",
             "user":"Enter your Kanboard username",
-            "apitoken":"Enter personal Kanboard API Token (create in Kanboard under My profile -> API)"}
+            "apitoken":"Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",
+            "assignee":"Enter assignee whos task need to be synced (leave empty for getting all tasks)"}
 
     for ky,mess in keyprompts.items():
         config[ky]=prompt(mess,getDefault(projconf,ky))
@@ -125,7 +127,7 @@ def runConfig(project,projconf):
 
     try:
         proj=kbclnt.getProjectByName(name=project)
-    except kanboard.ClientError:
+    except KBClientError:
         logging.error(f"Can not find kanboard project named {project}. Does it exist?")
         sys.exit(1)
    

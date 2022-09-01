@@ -34,7 +34,7 @@ setuptools.setup(
     packages=find_packages("."),
     package_dir={"":"."},
     scripts=['tasksync.py'],
-    install_requires=['kanboard','tasklib','sqlite3'],
+    install_requires=['kanboard','tasklib'],
     classifiers=["Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: POSIX :: Linux",
