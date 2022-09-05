@@ -44,6 +44,7 @@ def twFromkbTask(kbtask,twclient,projconf,twtask=None,test=False):
             twtask.start()
     elif vtag == 'COMPLETED':
         if not test and not twtask.completed and not twtask.deleted:
+            twtask.save()
             twtask.done()
     
 
