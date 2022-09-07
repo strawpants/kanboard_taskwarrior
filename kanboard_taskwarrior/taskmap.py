@@ -39,7 +39,7 @@ def twFromkbTask(kbtask,twclient,projconf,twtask=None,test=False):
     if vtag == 'WAITING':
         twtask['wait']=datetime.now()+timedelta(days=366)
     elif vtag == 'ACTIVE':
-        if not test and not twtask.active:
+        if not test and not twtask.active and not twtask.completed:
             twtask.save()
             twtask.start()
     elif vtag == 'COMPLETED':
