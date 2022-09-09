@@ -29,7 +29,7 @@ def main(argv):
                         help="Synchronize the registered connections")
 
     
-    parser.add_argument('-d','--daemonize',action='store',nargs="?",metavar="SECONDS",type=int,const=180,help="Run the syncing operation as a service (default checks once every 180 seconds)")
+    parser.add_argument('-d','--daemonize',action='store',nargs="?",metavar="SECONDS",type=int,const=3600,help="Run the syncing operation as a service (default checks once every hour)")
     
     parser.add_argument('-t','--test',action='store_true',
                         help="Report the actions which a sync would do but do not actually execute them")
