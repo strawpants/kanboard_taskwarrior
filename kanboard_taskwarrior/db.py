@@ -298,7 +298,8 @@ class DbConnector:
         if projconf["assignee"] is not None:
             qry+=f" assignee:{projconf['assignee']}"
         kbtasks=kbclnt.searchTasks(project_id=projconf["projid"],query=qry)
-        
+        #remove conflicts (don't resync these back to taskwarrior as it will create infinite growth)
+        kbtasks=[el for el in kbtasks if not el["title"].startswith("CONFLICT")]
         #retriev modified tasks from taskwarrior
         twclnt=twClient()
 

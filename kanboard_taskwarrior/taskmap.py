@@ -107,7 +107,6 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
 
     if vtag != "NONE": 
         kbMutation['column_id']=int(next(iter([val['kbid'] for ky,val in projconf["mapping"]['vtag.columns'].items() if ky == vtag])))
-    
 
     #determine the correct swimlane (or default)
 
@@ -138,13 +137,21 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
             if not kbid:
                 raise RuntimeError("Did not succeed to create kanboard task")
         else:
-            kbid=kbtask['id']
-            kbMutation['id']=kbid
-            del kbMutation['project_id']
-            success=kbclient.updateTask(**kbMutation)
+            kbid=int(kbtask['id'])
+            updateMutation={ky:kbMutation[ky] for ky in ("title","category_id","date_due") if ky in kbMutation}
+            updateMutation["id"]=kbid
+            success=kbclient.updateTask(**updateMutation)
             if not success:
                 raise RuntimeError("Did not succeed to update kanboard task")
+            
+            if "column_id" in kbMutation or "swimlane_id" in kbMutation:
 
+                moveMutation={ky:int(kbMutation[ky]) for ky in ("column_id","swimlane_id","project_id") if ky in kbMutation}
+                moveMutation["task_id"]=kbid#note the kanboard movetaskPosition call expects the task id not as id but as task_id 
+                moveMutation["position"]=1 #put at the top 
+                success=kbclient.moveTaskPosition(**moveMutation)
+                if not success:
+                    logging.warning("Did not succeed to move kanboard task, no change in position?")
         if kbid:
             #reretrieve newly generated or updated task from server
             kbtask=kbclient.getTask(task_id=kbid)
