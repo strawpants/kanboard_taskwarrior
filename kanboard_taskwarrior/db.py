@@ -219,6 +219,12 @@ class DbConnector:
                     twtask=twclnt.tasks.get(uuid=tasklink['uuid'])
                     if twtask.deleted:
                         twWasDeleted=True
+
+                    #check if it was a taskwarrior recurrent task (we do not want to sync those)
+                    # note as of 22 sept 2022 these should not occur in the synclist anymore, so the code below was to clean up leftovers/errors
+                    if twtask.recurring:
+                        #fake that this task hs been deleted
+                        twWasDeleted=True
                 except TWDoesNotExist:
                     #cannot be found or is not deleted
                     twWasDeleted=True            
@@ -296,7 +302,7 @@ class DbConnector:
         #retriev modified tasks from taskwarrior
         twclnt=twClient()
 
-        twtasks=twclnt.tasks.filter(project=projconf['project'],modified__after=projconf['lastsync'])        
+        twtasks=twclnt.tasks.filter(project=projconf['project'],modified__after=projconf['lastsync'],status__not="Recurring")        
 
        ## CREATE tables to figure out which tasks are new and which ones need to be syncrhoinzed
         with self.newcur() as cur:
