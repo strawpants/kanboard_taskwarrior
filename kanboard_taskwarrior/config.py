@@ -8,11 +8,12 @@ import sys
 from copy import deepcopy
 from datetime import datetime
 
-def getDefault(projconf,key):
+def getDefault(projconf,key,fallback=""):
     if key in projconf.keys():
-        return projconf[key]
-    else:
-        return ""
+        if projconf[key] is not None:
+            return projconf[key]
+    
+    return fallback
 
 def prompt(message,default=""):
     if default != "":
@@ -109,13 +110,14 @@ def runConfig(project,projconf):
             sys.exit(0)
     
     logging.info("Setting up Kanboard- taskwarrior mapping")
-    keyprompts={"url":"Enter Kanboard serveraddress",
-            "user":"Enter your Kanboard username",
-            "apitoken":"Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",
-            "assignee":"Enter assignee whos task need to be synced (leave empty for getting all tasks)"}
+    keyprompts={"url":("Enter Kanboard serveraddress",None),
+            "user":("Enter your Kanboard username",None),
+            "apitoken":("Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",None),
+            "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)",None),
+            "runtaskdsync":("Whether to apply 'task sync' (sync with taskd server) before doing the syncing operation (y/n)","n")}
 
-    for ky,mess in keyprompts.items():
-        config[ky]=prompt(mess,getDefault(projconf,ky))
+    for ky,val in keyprompts.items():
+        config[ky]=prompt(val[0],getDefault(projconf,ky,val[1]))
 
     #possibly fix url so it start with https and ends with /jsonrpc.php
     if not config["url"].endswith('/jsonrpc.php'):

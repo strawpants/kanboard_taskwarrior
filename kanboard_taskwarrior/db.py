@@ -32,7 +32,7 @@ migrationTable='migrationhistory'
 
 class DbConnector:
     """A class which connects toa  sqlite database and adds functionality to work with a sync-project"""
-    clientversion=1
+    clientversion=2
     def __init__(self,dbpath=None,test=False):
 
         self._dbcon=opendb(dbpath)
@@ -69,9 +69,9 @@ class DbConnector:
                 CREATE TABLE {tableName} (uuid TEXT UNIQUE, kbid INT UNIQUE, lastsync TEXT)
                 """)
     
-    def setMigration(self,version):
+    def setMigration(self,version,minversion=0):
         with self.newcur() as cur:
-            cur.execute(f"INSERT INTO {migrationTable} (version,migration_date) VALUES (?,?)",(version,datetime.now()))
+            cur.execute(f"INSERT INTO {migrationTable} (version,migration_date,minversion) VALUES (?,?,?)",(version,datetime.now(),minversion))
             self._dbcon.commit()
 
     def migrateCheck(self):
@@ -100,9 +100,17 @@ class DbConnector:
                 # cur.execute(f"ALTER TABLE {kbserverTable} ADD COLUMN assignee TEXT")
                 # cur.execute(f"INSERT INTO {migrationTable} (version,migration_date) VALUES (?,?)",(1,datetime.now()))
                 # self._dbcon.commit()
-                    
+        
+        if migration['version'] < 3:
+            #add an runtaskdsync column to the kbserver table
+            with self.newcur() as cur:
+                cur.execute(f"ALTER TABLE {kbserverTable} ADD COLUMN runtaskdsync TEXT")
+                self._dbcon.commit()
+            self.setMigration(2)
+
+
         # add other migration strategies
-        # if migration['version'] < 3 ....
+        # if migration['version'] < 4 ....
 
 
 
@@ -186,12 +194,12 @@ class DbConnector:
         with self.newcur() as cur:
             #convert mapping to json string
             config["mapping"]=json.dumps(config["mapping"])
-            values=tuple(config[ky] for ky in ["url","user","apitoken","project","projid","lastsync","mapping"])
+            values=tuple(config[ky] for ky in ["url","user","apitoken","project","projid","lastsync","mapping","runtaskdsync"])
             if not projconf:
-                cur.execute(f"INSERT INTO {kbserverTable} (url,user,apitoken,project,projid,lastsync,mapping) VALUES (?,?,?,?,?,?,?)",values)
+                cur.execute(f"INSERT INTO {kbserverTable} (url,user,apitoken,project,projid,lastsync,mapping,runtaskdsync) VALUES (?,?,?,?,?,?,?,?)",values)
 
             else:
-                cur.execute(f"UPDATE {kbserverTable} SET url = ?,user = ?, apitoken = ?,project = ?,projid = ?,lastsync = ?,mapping = ? WHERE project = '{projectname}'",values)
+                cur.execute(f"UPDATE {kbserverTable} SET url = ?,user = ?, apitoken = ?,project = ?,projid = ?,lastsync = ?,mapping = ?,runtaskdsync = ? WHERE project = '{projectname}'",values)
         
         if not self._test:
             #actually commit the changes to the database
@@ -275,6 +283,13 @@ class DbConnector:
     
     def syncSingle(self,projconf):
         """sync a single project"""
+        
+        #initialize a taskwarrior client
+        twclnt=twClient()
+        if projconf["runtaskdsync"] is not None:
+            if projconf["runtaskdsync"].lower() == "y":
+                logging.debug("Synchronizing with taskd server")
+                twclnt.sync()
 
         # Initialize kanboard client and check for connectivity
         kbclnt=kbClient(projconf["url"],projconf["user"],projconf["apitoken"])
@@ -301,7 +316,6 @@ class DbConnector:
         #remove conflicts (don't resync these back to taskwarrior as it will create infinite growth)
         kbtasks=[el for el in kbtasks if not el["title"].startswith("CONFLICT")]
         #retriev modified tasks from taskwarrior
-        twclnt=twClient()
 
         twtasks=twclnt.tasks.filter(project=projconf['project'],modified__after=projconf['lastsync'],status__not="Recurring")        
 

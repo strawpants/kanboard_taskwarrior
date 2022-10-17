@@ -3,8 +3,10 @@
 
 
 from collections import OrderedDict
+from kanboard import ClientError
 from tasklib import Task
 from datetime import datetime,timedelta,date
+import logging
 def getVtags():
 
     vtags=OrderedDict()
@@ -149,8 +151,9 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
                 moveMutation={ky:int(kbMutation[ky]) for ky in ("column_id","swimlane_id","project_id") if ky in kbMutation}
                 moveMutation["task_id"]=kbid#note the kanboard movetaskPosition call expects the task id not as id but as task_id 
                 moveMutation["position"]=1 #put at the top 
-                success=kbclient.moveTaskPosition(**moveMutation)
-                if not success:
+                try:
+                    success=kbclient.moveTaskPosition(**moveMutation)
+                except ClientError:
                     logging.warning("Did not succeed to move kanboard task, no change in position?")
         if kbid:
             #reretrieve newly generated or updated task from server
