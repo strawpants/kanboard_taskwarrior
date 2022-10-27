@@ -2,10 +2,8 @@
 # Author R.Rietbroek, Aug 2022
 
 import sys
-import os
 from kanboard_taskwarrior.db import DbConnector
-
-# import sqlite3
+from kanboard_taskwarrior.clients import TWClientError,KBClientError
 import argparse
 import logging
 from pprint import pprint
@@ -90,8 +88,19 @@ def main(argv):
     if args.sync:
         if args.daemonize:
             print(f"Starting in deamon mode (checks every {args.daemonize} seconds)")
+            nfail=0
             while True:
-                conn.syncTasks(args.project)
+                try:
+                    conn.syncTasks(args.project)
+                    #reset fail count
+                    nfail=0
+                except TWClientError,KBClientError:
+                    nfail+=1
+                    if nfail > 10:
+                        #stop after repeated failed attempts
+                        sys.exit(1)
+
+                    #ok try again next time
                 logging.info(f"Sleeping for {args.daemonize} seconds")
                 time.sleep(args.daemonize)
         else:

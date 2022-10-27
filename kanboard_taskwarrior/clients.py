@@ -5,6 +5,7 @@ import kanboard
 import requests
 import logging
 from tasklib import TaskWarrior,Task
+from tasklib.backends import TaskWarriorException
 
 def serverIsreachable(server="example.com",timeout=2):
     try:
@@ -22,6 +23,7 @@ def kbClient(kbserver,user,apitoken):
 
 TWDoesNotExist=Task.DoesNotExist
 KBClientError=kanboard.ClientError
+TWClientError=TaskWarriorException
 
 def twClient():
     return TaskWarrior(create=False)

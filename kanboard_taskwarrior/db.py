@@ -7,7 +7,7 @@ from contextlib import closing
 import json
 from kanboard_taskwarrior.config import runConfig,configUDA
 from kanboard_taskwarrior.taskmap import twFromkbTask,kbFromtwTask
-from kanboard_taskwarrior.clients import kbClient, twClient,TWDoesNotExist,KBClientError
+from kanboard_taskwarrior.clients import kbClient, twClient,TWDoesNotExist,KBClientError,TWClientError
 
 from uuid import uuid4
 from datetime import datetime
@@ -214,7 +214,7 @@ class DbConnector:
         if kbclnt is None:
             #we can not sync if the kanboard instance is not reachable or if the user cannot be authenticated
             return
-        
+         
         twclnt=twClient()
 
         with self.newcur() as cur:
