@@ -110,10 +110,10 @@ def runConfig(project,projconf):
             sys.exit(0)
     
     logging.info("Setting up Kanboard- taskwarrior mapping")
-    keyprompts={"url":("Enter Kanboard serveraddress",None),
-            "user":("Enter your Kanboard username",None),
-            "apitoken":("Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",None),
-            "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)",None),
+    keyprompts={"url":("Enter Kanboard serveraddress",""),
+            "user":("Enter your Kanboard username",""),
+            "apitoken":("Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",""),
+            "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)",""),
             "runtaskdsync":("Whether to apply 'task sync' (sync with taskd server) before doing the syncing operation (y/n)","n")}
 
     for ky,val in keyprompts.items():
@@ -131,7 +131,7 @@ def runConfig(project,projconf):
     try:
         proj=kbclnt.getProjectByName(name=project)
     except KBClientError:
-        logging.error(f"Can not find kanboard project named {project}. Does it exist?")
+        logging.error(f"Can not find kanboard project named {project}. Does it exist and do you have access?")
         sys.exit(1)
    
     config["projid"]=proj["id"]

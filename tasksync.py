@@ -94,7 +94,7 @@ def main(argv):
                     conn.syncTasks(args.project)
                     #reset fail count
                     nfail=0
-                except TWClientError,KBClientError:
+                except (TWClientError,KBClientError) as exc:
                     nfail+=1
                     if nfail > 10:
                         #stop after repeated failed attempts
