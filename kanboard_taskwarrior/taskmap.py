@@ -39,16 +39,29 @@ def twFromkbTask(kbtask,twclient,projconf,twtask=None,test=False):
 
     vtag=next(iter([ky for ky,val in projconf["mapping"]['vtag.columns'].items() if val['kbid'] == kbtask['column_id']]),"NONE")
     if vtag == 'WAITING':
+        if twtask.active:
+            #stop the task if it's active
+            twtask.stop()
+        #set wait date a year from now
         twtask['wait']=datetime.now()+timedelta(days=366)
+        twtask.save()
     elif vtag == 'ACTIVE':
         if not test and not twtask.active and not twtask.completed:
             twtask.save()
+            #also unset the waiting date if it has one so it will become visible
+            if twtask.waiting:
+                twtask['wait']=None
             twtask.start()
+            twtask.save()
     elif vtag == 'COMPLETED':
         if not test and not twtask.completed and not twtask.deleted:
             twtask.save()
             twtask.done()
-    
+    elif vtag == 'WEEK':
+        if twtask.waiting:
+            #unset waiting state
+            twtask['wait']=None
+            twtask.save()
 
     #swimlane mapping
     swimlane=next(iter([ky for ky,val in projconf["mapping"]['uda.swimlane'].items() if val['kbid'] == kbtask['swimlane_id']]))
