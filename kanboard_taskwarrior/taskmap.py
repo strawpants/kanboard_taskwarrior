@@ -37,7 +37,7 @@ def twFromkbTask(kbtask,twclient,projconf,twtask=None,test=False):
     if datedue != 0:
         twtask['due']=datetime.fromtimestamp(datedue)
 
-    vtag=next(iter([ky for ky,val in projconf["mapping"]['vtag.columns'].items() if val['kbid'] == kbtask['column_id']]),"NONE")
+    vtag=next(iter([ky for ky,val in projconf["mapping"]['vtag.columns'].items() if int(val['kbid']) == kbtask['column_id']]),"NONE")
     if vtag == 'WAITING':
         if twtask.active:
             #stop the task if it's active
@@ -64,10 +64,11 @@ def twFromkbTask(kbtask,twclient,projconf,twtask=None,test=False):
             twtask.save()
 
     #swimlane mapping
-    swimlane=next(iter([ky for ky,val in projconf["mapping"]['uda.swimlane'].items() if val['kbid'] == kbtask['swimlane_id']]))
+    
+    swimlane=next(iter([ky for ky,val in projconf["mapping"]['uda.swimlane'].items() if int(val['kbid']) == kbtask['swimlane_id']]))
     twtask['swimlane']=swimlane
 
-    cat=next(iter([ky for ky,val in projconf["mapping"]['uda.kbcat'].items() if val['kbid'] == kbtask['category_id']]),None)
+    cat=next(iter([ky for ky,val in projconf["mapping"]['uda.kbcat'].items() if int(val['kbid']) == kbtask['category_id']]),None)
     if cat is not None:
         twtask['kbcat']=cat
     
@@ -134,7 +135,6 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
     cat=twtask['kbcat']
     if cat is not None:
         kbMutation['category_id']=int(next(iter([val['kbid'] for ky,val in projconf["mapping"]['uda.kbcat'].items() if ky == cat ])))
-
     if not test:
         if kbtask and conflict:
             # duplicate the existing task and mark as a conflict

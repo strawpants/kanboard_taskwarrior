@@ -289,7 +289,10 @@ class DbConnector:
         if projconf["runtaskdsync"] is not None:
             if projconf["runtaskdsync"].lower() == "y":
                 logging.debug("Synchronizing with taskd server")
-                twclnt.sync()
+                try:
+                    twclnt.sync()
+                except TWClientError as exc:
+                    logging.warning(f"Did not succeed to synchronize project {projconf['project']} with task server, continuing")
 
         # Initialize kanboard client and check for connectivity
         kbclnt=kbClient(projconf["url"],projconf["user"],projconf["apitoken"])
@@ -358,7 +361,6 @@ class DbConnector:
             #but do set the lastsync time to now
             # self._setlastSync(projconf['project'])
             return
-
         with self.newcur() as cur:
             for item in tobesynced:
                 kbid=item['kbid']
