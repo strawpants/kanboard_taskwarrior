@@ -206,13 +206,15 @@ class DbConnector:
             self._dbcon.commit()
     
     def purgeTasks(self,projectname):
-        """Delete tasks which were synced but for which one has been deleted"""
+        """Delete tasks which were synced but for which one entry has been deleted"""
         self._fillentries()
         projconf=self._syncentries[projectname]
 
         kbclnt=kbClient(projconf["url"],projconf["user"],projconf["apitoken"])
+
         if kbclnt is None:
             #we can not sync if the kanboard instance is not reachable or if the user cannot be authenticated
+            logging.error("Cannot reach kanboard instance")
             return
          
         twclnt=twClient()
@@ -241,6 +243,7 @@ class DbConnector:
                 try:
                     kbtask=kbclnt.getTask(task_id=tasklink['kbid'])
                 except KBClientError:
+                    # task cannot be found/accessed anymore
                     kbWasDeleted=True
                 
                 if twWasDeleted and not kbWasDeleted:
@@ -372,7 +375,13 @@ class DbConnector:
 
                     if kbtask is None:
                         #try getting it from the server
-                        kbtask=kbclnt.getTask(task_id=kbid)
+                        try:
+                            kbtask=kbclnt.getTask(task_id=kbid)
+                        except KBClientError:
+                            #note found or inaccessible
+                            logging.error(f"Taskwarrior task {uuid} cannot be found in kanboard anymore, try cleaning dangling entries with  tasksync.py --purge -v {projconf['project']}")
+                            #skip for now
+                            continue
                 else:
                     kbtask=None
 

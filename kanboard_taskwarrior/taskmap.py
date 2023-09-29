@@ -128,9 +128,10 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
 
     swimlane=twtask['swimlane']
 
-    if swimlane is not None:
-        kbMutation['swimlane_id']=int(next(iter([val['kbid'] for ky,val in projconf["mapping"]['uda.swimlane'].items() if ky == swimlane])))
-    
+    if swimlane in projconf["mapping"]["uda.swimlane"]:
+        # import pdb;pdb.set_trace()
+        kbMutation['swimlane_id']=int(projconf["mapping"]['uda.swimlane'][swimlane]['kbid'])
+
     #determine the correct category (or None)
     cat=twtask['kbcat']
     if cat is not None:
