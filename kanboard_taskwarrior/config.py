@@ -45,8 +45,9 @@ def configUDA(mapper):
         valky=f"{udaky}.values"
         labky=f"{udaky}.label"
         typeky=f"{udaky}.type"
-
-        udaval.extend(tw.config[valky].split(","))
+        
+        if valky in tw.config:
+            udaval.extend(tw.config[valky].split(","))
 
         # if valky in tw.config:
             # udaval2=tw.config[valky]
