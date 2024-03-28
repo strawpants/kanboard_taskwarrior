@@ -24,10 +24,8 @@ def prompt(message,default=""):
     if inp:
         tp=type(default)
         return tp(inp)
-    elif default != "":
-        return default
     else:
-        raise ValueError("Invalid input")
+        return default
 
 def configUDA(mapper):
     tpy="string"
@@ -115,7 +113,7 @@ def runConfig(project,projconf):
             "user":("Enter your Kanboard username",""),
             "apitoken":("Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",""),
             "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)",""),
-            "runtaskdsync":("Whether to apply 'task sync' (sync with taskd server) before doing the syncing operation (y/n)","n")}
+            "runtaskdsync":("Whether to apply 'task sync' (sync with taskd server (taskwarrior < 3 only)) before doing the syncing operation (y/n)","n")}
 
     for ky,val in keyprompts.items():
         config[ky]=prompt(val[0],getDefault(projconf,ky,val[1]))
@@ -131,6 +129,7 @@ def runConfig(project,projconf):
 
     try:
         proj=kbclnt.getProjectByName(name=project)
+
     except KBClientError:
         logging.error(f"Can not find kanboard project named {project}. Does it exist and do you have access?")
         sys.exit(1)
