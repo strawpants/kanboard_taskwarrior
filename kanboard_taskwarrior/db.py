@@ -32,7 +32,7 @@ migrationTable='migrationhistory'
 
 class DbConnector:
     """A class which connects toa  sqlite database and adds functionality to work with a sync-project"""
-    clientversion=2
+    clientversion=3
     def __init__(self,dbpath=None,test=False):
 
         self._dbcon=opendb(dbpath)
@@ -81,17 +81,17 @@ class DbConnector:
         #check for database version
         with self.newcur() as cur:
             #get the newest migration
-            migration=cur.execute(f"SELECT * FROM {migrationTable} ORDER BY version DESC").fetchone()
+            migration=cur.execute(f"SELECT * FROM {migrationTable} ORDER BY version DESC LIMIT 1").fetchone()
             if not migration:
                 # pristine database creation -> set version to the current client version (mo need to do further migrations
-                self.setMigration(self.clientversion)
+                self.setMigration(self.clientversion,self.clientversion)
                 return
         
         if self.clientversion < migration['minversion']:
             raise RuntimeError(f"Client version {self.clientversion} should be larger than {migration['minversion']} to work with this database")
-        
-        if self.clientversion <= migration['version']:
-            logging.debug(f"No need to migrate database, already at version {migration['version']}")
+        dbversion=migration['version'] 
+        if self.clientversion <= dbversion:
+            logging.debug(f"No need to migrate database, already at version {dbversion}")
             return
 
         # if migration['version'] < 2:
@@ -100,14 +100,23 @@ class DbConnector:
                 # cur.execute(f"ALTER TABLE {kbserverTable} ADD COLUMN assignee TEXT")
                 # cur.execute(f"INSERT INTO {migrationTable} (version,migration_date) VALUES (?,?)",(1,datetime.now()))
                 # self._dbcon.commit()
-        
-        if migration['version'] < 3:
+        if dbversion < 2:
             #add an runtaskdsync column to the kbserver table
+            logging.info("Migratiing database to version 2")
             with self.newcur() as cur:
                 cur.execute(f"ALTER TABLE {kbserverTable} ADD COLUMN runtaskdsync TEXT")
                 self._dbcon.commit()
-            self.setMigration(2)
-
+                self.setMigration(2)
+                dbversion=2
+        
+        if dbversion < 3:
+            #remove runtaskdsync column from the kbserver table (no longer supported by taskwarrior > v3)
+            logging.info("Migratiing database to version 3")
+            with self.newcur() as cur:
+                cur.execute(f"ALTER TABLE {kbserverTable} DROP COLUMN runtaskdsync")
+                self._dbcon.commit()
+                self.setMigration(3,3)
+                dbversion=3
 
         # add other migration strategies
         # if migration['version'] < 4 ....
@@ -156,9 +165,19 @@ class DbConnector:
                 if "mapping" in entry.keys():
                     if entry["mapping"]:
                         self._syncentries[projname]["mapping"]=json.loads(entry["mapping"])
+                if "assignee" in entry.keys():
+                    if entry["assignee"] is not None:
+                        self._syncentries[projname]["assignee"]=json.loads(entry["assignee"])
+                else:
+                    
+                    self._syncentries[projname]["assignee"]={}
+
                 #add the table name wher ethe synced entries can be found
                 synctablename=f"{projname.lower().replace(' ','_')}_tasks"
                 self._syncentries[projname]["synctable"]=synctablename
+
+
+
     
     def _setlastSync(self,projname):
         if not self._test:
@@ -187,19 +206,20 @@ class DbConnector:
         else:
             projconf={}
         config=runConfig(projectname,projconf)
-        
         #configure taskwarrior uda's
         configUDA(config["mapping"])
         #store the configuration in the database
         with self.newcur() as cur:
             #convert mapping to json string
             config["mapping"]=json.dumps(config["mapping"])
-            values=tuple(config[ky] for ky in ["url","user","apitoken","project","projid","lastsync","mapping","runtaskdsync"])
+            if config['assignee']:
+                config['assignee']=json.dumps(config['assignee'])
+            values=tuple(config[ky] for ky in ["url","user","apitoken","project","projid","lastsync","mapping","assignee"])
             if not projconf:
-                cur.execute(f"INSERT INTO {kbserverTable} (url,user,apitoken,project,projid,lastsync,mapping,runtaskdsync) VALUES (?,?,?,?,?,?,?,?)",values)
+                cur.execute(f"INSERT INTO {kbserverTable} (url,user,apitoken,project,projid,lastsync,mapping,assignee) VALUES (?,?,?,?,?,?,?,?)",values)
 
             else:
-                cur.execute(f"UPDATE {kbserverTable} SET url = ?,user = ?, apitoken = ?,project = ?,projid = ?,lastsync = ?,mapping = ?,runtaskdsync = ? WHERE project = '{projectname}'",values)
+                cur.execute(f"UPDATE {kbserverTable} SET url = ?,user = ?, apitoken = ?,project = ?,projid = ?,lastsync = ?,mapping = ?,assignee = ? WHERE project = '{projectname}'",values)
         
         if not self._test:
             #actually commit the changes to the database
@@ -242,6 +262,9 @@ class DbConnector:
                 kbWasDeleted=False
                 try:
                     kbtask=kbclnt.getTask(task_id=tasklink['kbid'])
+                    if 'assignee' in projconf and kbtask['owner_id'] != projconf['assignee']['kbid']:
+                        #this will remove taskwarrior task which were not assigned to the assignee
+                        kbWasDeleted=True
                 except KBClientError:
                     # task cannot be found/accessed anymore
                     kbWasDeleted=True
@@ -289,13 +312,6 @@ class DbConnector:
         
         #initialize a taskwarrior client
         twclnt=twClient()
-        if projconf["runtaskdsync"] is not None:
-            if projconf["runtaskdsync"].lower() == "y":
-                logging.debug("Synchronizing with taskd server")
-                try:
-                    twclnt.sync()
-                except TWClientError as exc:
-                    logging.warning(f"Did not succeed to synchronize project {projconf['project']} with task server, continuing")
 
         # Initialize kanboard client and check for connectivity
         kbclnt=kbClient(projconf["url"],projconf["user"],projconf["apitoken"])
@@ -316,15 +332,14 @@ class DbConnector:
         
         # Retrieve recently modified tasks from kanboard
         qry=f"modified:>={int(projconf['lastsync'].timestamp())}"
-        if projconf["assignee"] is not None:
-            qry+=f" assignee:{projconf['assignee']}"
+        if projconf["assignee"]:
+            qry+=f" assignee:{projconf['assignee']['user']}"
         kbtasks=kbclnt.searchTasks(project_id=projconf["projid"],query=qry)
         #remove conflicts (don't resync these back to taskwarrior as it will create infinite growth)
         kbtasks=[el for el in kbtasks if not el["title"].startswith("CONFLICT")]
         #retriev modified tasks from taskwarrior
 
-        twtasks=twclnt.tasks.filter(project=projconf['project'],modified__after=projconf['lastsync'],status__not="Recurring")        
-
+        twtasks=twclnt.tasks.filter(project=projconf['project'],modified__after=projconf['lastsync'],status__not="Deleted").filter(status__not="Recurring")
        ## CREATE tables to figure out which tasks are new and which ones need to be syncrhoinzed
         with self.newcur() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {lastmodTable}")#note: probably not needed for temp tables

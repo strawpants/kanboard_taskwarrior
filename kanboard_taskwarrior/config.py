@@ -3,7 +3,6 @@
 import logging
 from kanboard_taskwarrior.taskmap import getVtags,colkey,catkey,swimkey
 from kanboard_taskwarrior.clients import kbClient,twClient,KBClientError
-
 import sys
 from copy import deepcopy
 from datetime import datetime
@@ -112,12 +111,12 @@ def runConfig(project,projconf):
     keyprompts={"url":("Enter Kanboard serveraddress",""),
             "user":("Enter your Kanboard username",""),
             "apitoken":("Enter personal Kanboard API Token (create in Kanboard under My profile -> API)",""),
-            "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)",""),
-            "runtaskdsync":("Whether to apply 'task sync' (sync with taskd server (taskwarrior < 3 only)) before doing the syncing operation (y/n)","n")}
+            "assignee":("Enter assignee whos task need to be synced (leave empty for getting all tasks)","")}
 
     for ky,val in keyprompts.items():
         config[ky]=prompt(val[0],getDefault(projconf,ky,val[1]))
-
+    
+    
     #possibly fix url so it start with https and ends with /jsonrpc.php
     if not config["url"].endswith('/jsonrpc.php'):
         config["url"]+="/jsonrpc.php"
@@ -126,7 +125,6 @@ def runConfig(project,projconf):
     
     #also setup mapping of this project
     kbclnt=kbClient(config["url"],config["user"],config["apitoken"])
-
     try:
         proj=kbclnt.getProjectByName(name=project)
 
@@ -136,6 +134,13 @@ def runConfig(project,projconf):
    
     config["projid"]=proj["id"]
     config["lastsync"]=datetime(2000,1,1) #old enought o kick off a new sync
+    
+    # #retrieve kbid of assignee
+    if config['assignee'] != "":
+        assigneeId=kbclnt.getUserByName(username=config['assignee'])['id']
+        config['assignee']={"user":config['assignee'],"kbid":assigneeId}
+
+
     mapper=projconf["mapping"]
 
      

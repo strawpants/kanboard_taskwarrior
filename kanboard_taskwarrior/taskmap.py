@@ -90,7 +90,10 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
     due=twtask['due']
     if due is not None:
         kbMutation['date_due']=due.strftime("%Y-%m-%d %H:%M")
-    
+
+    #possibly add assignee
+    if projconf['assignee']:
+        kbMutation['owner_id']=projconf['assignee']['kbid']
     #determine the correct column to put the task in based on the mapped vtags
     #default vtag is the first registered one
     vtag=next(iter(projconf["mapping"]['vtag.columns']))
@@ -134,8 +137,13 @@ def kbFromtwTask(twtask,kbclient,projconf,kbtask=None,conflict=False,test=False)
 
     #determine the correct category (or None)
     cat=twtask['kbcat']
+
     if cat is not None:
-        kbMutation['category_id']=int(next(iter([val['kbid'] for ky,val in projconf["mapping"]['uda.kbcat'].items() if ky == cat ])))
+        try:
+            kbMutation['category_id']=int(next(iter([val['kbid'] for ky,val in projconf["mapping"]['uda.kbcat'].items() if ky == cat ])))
+        except StopIteration:
+            logging.warning(f"Taskwarrior category {cat} not found in mapping, ignoring")
+            
     if not test:
         if kbtask and conflict:
             # duplicate the existing task and mark as a conflict
