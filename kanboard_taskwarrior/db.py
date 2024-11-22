@@ -165,12 +165,12 @@ class DbConnector:
                 if "mapping" in entry.keys():
                     if entry["mapping"]:
                         self._syncentries[projname]["mapping"]=json.loads(entry["mapping"])
-                if "assignee" in entry.keys():
-                    if entry["assignee"] is not None:
-                        self._syncentries[projname]["assignee"]=json.loads(entry["assignee"])
-                else:
-                    
-                    self._syncentries[projname]["assignee"]={}
+                assignee={}
+                if entry["assignee"] is not None:
+                    if entry['assignee'] != "":
+                        assignee=json.loads(entry["assignee"])
+
+                self._syncentries[projname]["assignee"]=assignee
 
                 #add the table name wher ethe synced entries can be found
                 synctablename=f"{projname.lower().replace(' ','_')}_tasks"
