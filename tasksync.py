@@ -41,6 +41,9 @@ def main(argv):
 
     parser.add_argument('-l','--list',action='store_true',
                         help="List configured couplings")
+    
+    parser.add_argument('--db-path',type=str, nargs="?",default=None,const=None,
+                        help="Explicitly specify the database file to be used (default uses ~/.task/taskw-sync-KB.sql)")
     parser.add_argument('-v','--verbose',action='count',default=0,help="Increase verbosity (more -v's mean an increased verbosity)")    
     if len(argv) == 1:
         print("No command line arguments provided")
@@ -57,7 +60,7 @@ def main(argv):
     logging.basicConfig(format='tasksync-%(levelname)s:%(message)s', level=loglevel)
 
     #open up a connection with a database 
-    conn=DbConnector(test=args.test)
+    conn=DbConnector(test=args.test,dbpath=args.db_path)
 
     if args.list:
         for projname,res in conn.items():
