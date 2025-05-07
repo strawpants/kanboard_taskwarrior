@@ -116,7 +116,6 @@ def runConfig(project,projconf):
     for ky,val in keyprompts.items():
         config[ky]=prompt(val[0],getDefault(projconf,ky,val[1]))
     
-    
     #possibly fix url so it start with https and ends with /jsonrpc.php
     if not config["url"].endswith('/jsonrpc.php'):
         config["url"]+="/jsonrpc.php"
@@ -136,10 +135,9 @@ def runConfig(project,projconf):
     config["lastsync"]=datetime(2000,1,1) #old enought o kick off a new sync
     
     # #retrieve kbid of assignee
-    if config['assignee'] != "":
-        assigneeId=kbclnt.getUserByName(username=config['assignee'])['id']
-        config['assignee']={"user":config['assignee'],"kbid":assigneeId}
-
+    if bool(config['assignee']):
+            assigneeId=kbclnt.getUserByName(username=config['assignee'])['id']
+            config['assignee']={"user":config['assignee'],"kbid":assigneeId}
 
     mapper=projconf["mapping"]
 

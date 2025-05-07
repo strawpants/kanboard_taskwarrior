@@ -165,7 +165,7 @@ class DbConnector:
                 if "mapping" in entry.keys():
                     if entry["mapping"]:
                         self._syncentries[projname]["mapping"]=json.loads(entry["mapping"])
-                assignee={}
+                assignee=""
                 if entry["assignee"] is not None:
                     if entry['assignee'] != "":
                         assignee=json.loads(entry["assignee"])
@@ -262,9 +262,10 @@ class DbConnector:
                 kbWasDeleted=False
                 try:
                     kbtask=kbclnt.getTask(task_id=tasklink['kbid'])
-                    if 'assignee' in projconf and kbtask['owner_id'] != projconf['assignee']['kbid']:
-                        #this will remove taskwarrior task which were not assigned to the assignee
-                        kbWasDeleted=True
+                    if 'assignee' in projconf and bool(projconf['assignee']):
+                        if kbtask['owner_id'] != projconf['assignee']['kbid']:
+                            #this will remove taskwarrior task which were not assigned to the assignee
+                            kbWasDeleted=True
                 except KBClientError:
                     # task cannot be found/accessed anymore
                     kbWasDeleted=True
